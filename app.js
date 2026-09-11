@@ -165,11 +165,13 @@ const PRESETS = [
   },
   {
     id: 'AtoT',
-    name: 'Critical-coupling cavity (V_g = 32 V)',
-    description: 'Asymmetric TiO₂/SiO₂ Bragg cavity (7 front / 21 back periods, λc = 3 µm) ' +
-               'with a graphene monolayer at the antinode of a half-wave low-index defect. ' +
-               'Gated to V_g = 32 V, at which δ = γ_e and simulated absorption reaches ' +
-               'A ≈ 0.9987. See Table 1 and §4.1.',
+    name: 'Absorption/transmission mirror',
+    description: 'Asymmetric TiO₂/SiO₂ Bragg cavity (8 front / 9 back periods, λc = 3 µm) ' +
+               'with a graphene monolayer at the antinode of a half-wave low-index defect, ' +
+               'flanked by added half-width SiO₂ spacers. Gated from V_g = 0 V (R≈0.011, ' +
+               'T≈0.442, A≈0.547) to V_g = 100 V (R≈0.069, T≈0.867, A≈0.064), trading ' +
+               'absorption for transmission. Not a clean flip — R never reaches 0 and T ' +
+               'never drops below ≈0.44. See §5 and Figure 2.',
     apply: () => {
       const lc = 3000;
       const dH = lc / (4 * N_HIGH), dL = lc / (4 * N_LOW);
@@ -195,7 +197,7 @@ const PRESETS = [
   {
     id: 'freestanding',
     name: 'Freestanding Graphene',
-    description: 'Freestanding graphene sheet (n = 1.0, d = 0) in air. See UNKNOWN.',
+    description: 'Freestanding graphene sheet (n = 1.0, d = 0) in air.',
     apply: () => {
       layerState = [
         { n: 1.0, k: 0, d: 30},
