@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>1-D Photonic Crystal — Transfer Matrix Method</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+  <div class="main">
+    <div class="card">
+      <h1>1-D photonic crystal — transfer matrix method</h1>
+      <p class="subtitle">Characteristic-matrix TMM (Born &amp; Wolf; Yeh, <em>Optical Waves in Layered Media</em>). Reflectance, transmittance and absorption vs. wavelength.</p>
+      <svg id="chart" width="100%" viewBox="0 0 720 340"></svg>
+      <div class="legend">
+        <span><span class="swatch" style="background:var(--accent-r)"></span>Reflectance R</span>
+        <span><span class="swatch" style="background:var(--accent-t)"></span>Transmittance T</span>
+        <span><span class="swatch" style="background:var(--accent-a); border-top:1px dashed var(--accent-a); height:0"></span>Absorption A</span>
+      </div>
+      <div class="probe-row">
+        <label style="margin:0; white-space:nowrap;">Probe λ</label>
+        <input type="range" id="probe-slider" min="300" max="900" value="550" step="1">
+        <span id="probe-value" style="font-size:13px; font-family:monospace; min-width:60px; text-align:right;">550 nm</span>
+      </div>
+      <div class="readout" id="readout">Press Calculate to run the simulation.</div>
+    </div>
+
+    <div class="card">
+      <h2>Gate-voltage sweep</h2>
+      <p class="subtitle">Sweeps V_g on one graphene layer in the layer list at right, holding every other layer (mirrors, other layers, global params) exactly as configured.</p>
+
+      <div class="field-row">
+        <div><label>Graphene layer to sweep</label>
+          <select id="vg-layer-select"></select>
+        </div>
+        <div><label>Probe / peak-search λ (nm)</label><input type="number" id="vg_wl_probe" value="3000.2" step="1"></div>
+      </div>
+      <div class="field-row">
+        <div><label>V_g min (V)</label><input type="number" id="vg_min" value="0" step="1"></div>
+        <div><label>V_g max (V)</label><input type="number" id="vg_max" value="100" step="1"></div>
+        <div><label># of V_g points</label><input type="number" id="vg_pts" value="50" step="1" min="2"></div>
+      </div>
+      <div class="field-row" style="grid-template-columns: 1fr;">
+        <div>
+          <label>Relocate peak each step</label>
+          <select id="vg_relocate">
+            <option value="yes" selected>Yes — re-find λ near resonance</option>
+            <option value="no">No — fixed probe wavelength</option>
+          </select>
+        </div>
+        <div><label>Search window ± (nm), if relocating</label><input type="number" id="vg_window" value="30" step="5"></div>
+      </div>
+
+      <button class="primary" id="vg-run-btn" style="margin-top:6px;">Run V_g sweep</button>
+      <span class="status" id="vg-status"></span>
+
+      <svg id="vg-chart" width="100%" viewBox="0 0 720 300" style="margin-top:12px;"></svg>
+      <div class="legend">
+        <span><span class="swatch" style="background:var(--accent-r)"></span>Reflectance R</span>
+        <span><span class="swatch" style="background:var(--accent-t)"></span>Transmittance T</span>
+        <span><span class="swatch" style="background:var(--accent-a); border-top:1px dashed var(--accent-a); height:0"></span>Absorption A</span>
+      </div>
+      <div class="probe-row">
+        <label style="margin:0; white-space:nowrap;">Inspect V_g</label>
+        <input type="range" id="vg-probe-slider" min="0" max="1" value="0" step="1" disabled>
+        <span id="vg-probe-value" style="font-size:13px; font-family:monospace; min-width:220px; text-align:right;">run a sweep first</span>
+      </div>
+      <div class="readout" id="vg-readout">Set parameters above and press "Run V_g sweep."</div>
+    </div>
+
+    <div class="card">
+      <h2>Beam diagram at probe wavelength</h2>
+      <svg id="diagram" width="100%" viewBox="0 0 720 160"></svg>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-fixed">
+      <details id="global-parameters">
+        <summary>Global parameters</summary>
+        <div class="field-row">
+          <div><label>n incident</label><input type="number" id="n_incident" value="1.0" step="0.01"></div>
+          <div><label>n substrate</label><input type="number" id="n_substrate" value="1.5" step="0.01"></div>
+        </div>
+        <div class="field-row">
+          <div><label>Angle (deg)</label><input type="number" id="theta" value="0" step="1"></div>
+          <div><label>Polarization</label>
+            <select id="pol"><option value="s">s-pol (TE)</option><option value="p">p-pol (TM)</option></select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div><label>λ min (nm)</label><input type="number" id="wl_min" value="300" step="10"></div>
+          <div><label>λ max (nm)</label><input type="number" id="wl_max" value="900" step="10"></div>
+        </div>
+        <div><label>λ points</label><input type="number" id="wl_pts" value="4000" step="50"></div>
+      </details>
+      
+      <details id="graphene-details">
+        <summary>Graphene gate &amp; material parameters</summary>
+        <div class="field-row">
+          <div><label>ε_ox (SiO₂)</label><input type="number" id="gr_epsOx" value="3.9" step="0.1"></div>
+          <div><label>t_ox (nm)</label><input type="number" id="gr_tox" value="285" step="5"></div>
+        </div>
+        <div class="field-row">
+          <div><label>V_Dirac (V)</label><input type="number" id="gr_vdirac" value="0" step="1"></div>
+          <div><label>Temperature (K)</label><input type="number" id="gr_TK" value="300" step="10"></div>
+        </div>
+        <div class="field-row">
+          <div><label>n_imp (cm⁻²)</label><input type="number" id="gr_nimp" value="1e11" step="any"></div>
+          <div><label>ε_g (environment)</label><input type="number" id="gr_epsG" value="2.45" step="0.05"></div>
+        </div>
+        <div class="field-row">
+          <div><label>vF (m/s)</label><input type="number" id="gr_vF" value="1.0e6" step="any"></div>
+
+        </div>
+      </details>
+
+    </div>
+
+    <div class="sidebar-scroll">
+      <h2>Layers <span id="layer-count" style="color:var(--text-muted); text-transform:none; font-weight:400;"></span></h2>
+      <div id="layers-container"></div>
+      <button id="add-layer-btn">+ Add layer</button>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="secondary" id="reset-btn">Reset example</button>
+      <div class="preset-dropdown" id="preset-dropdown">
+        <button class="secondary" id="preset-btn" type="button" aria-haspopup="true" aria-expanded="false">
+          Presets ▾
+        </button>
+        <div class="preset-menu" id="preset-menu" hidden></div>
+      </div>
+      <button class="primary" id="calc-btn">Calculate</button>
+    </div>
+  </div>
+</div>
+
+<script src="tmm-physics.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
