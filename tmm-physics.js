@@ -1,7 +1,3 @@
-// CONVENTIONS: time factor e^{-iωt}, forward waves
-// e^{+ikz}, lossy media have Im(n) = κ > 0. The graphene Kubo formula below
-// (Drude pole at ω = -iτ⁻¹) uses the same convention. Do not mix.
-
 // MARK: Complex Functions
 // -----------------------------------------------------------------------------------------------
 
@@ -33,63 +29,49 @@ function cAbs2(a) { return a.re * a.re + a.im * a.im; }
 // MARK: Constants + Parameters
 // -----------------------------------------------------------------------------------------------
 
-const E_CHARGE = 1.602176634e-19;   // C
-const HBAR     = 1.054571817e-34;   // J·s
-const EPS0     = 8.8541878128e-12;  // F/m
-const KB_EV    = 8.617333262e-5;    // eV/K
-const ETA0     = 376.730313668;     // Ohm, vacuum impedance
-const EV_NM    = 1239.841984;       // (eV)·(nm): E[eV] = 1239.84/λ[nm]
+const E_CHARGE = 1.602176634e-19;
+const HBAR     = 1.054571817e-34;
+const EPS0     = 8.8541878128e-12;
+const KB_EV    = 8.617333262e-5;
+const ETA0     = 376.730313668;
+const EV_NM    = 1239.841984;
 
-const E2_OVER_HBAR = (E_CHARGE * E_CHARGE) / HBAR; // ≈ 2.4341e-4 S
-const SIGMA0       = E2_OVER_HBAR / 4;             // universal σ0 = e²/4ħ ≈ 6.085e-5 S
+const E2_OVER_HBAR = (E_CHARGE * E_CHARGE) / HBAR;
+const SIGMA0       = E2_OVER_HBAR / 4;
 
 const GRAPHENE_DEFAULTS = {
-  VDirac:   0,      // V.   Idealized; real devices offset by 10s of V (Chen et al., Nat. Phys. 4, 377 (2008))
-  epsOx:    3.9,    // SiO2 (Novoselov et al., Science 306, 666 (2004))
-  tox_nm:   285,    // nm.  Standard visibility thickness (Blake et al., APL 91, 063124 (2007))
-  T_K:      300,    // K
-  vF:       1.0e6,  // m/s  (Castro Neto et al., RMP 81, 109 (2009); Novoselov et al., Nature 438, 197 (2005))
-  nimp_cm2: 1e11,   // charged impurities /cm² (order: Adam et al., PNAS 104, 18392 (2007); Chen 2008)
-  epsG:     2.45,   // env. dielectric const ≈ (ε_air + ε_SiO2)/2 for graphene on SiO2 (Falkovsky 2008)
+  VDirac:   0,
+  epsOx:    3.9,
+  tox_nm:   285,
+  T_K:      300,
+  vF:       1.0e6,
+  nimp_cm2: 1e11,
+  epsG:     2.45,
 };
 
 // MARK: Gate Electrostatics
 // -----------------------------------------------------------------------------------------------
-
-// n = Cg(Vg − VDirac)/e ;  μ = ħ vF sqrt(π|n|) sign(n)
 function grapheneGate(Vg, gp) {
-  const Cg = (EPS0 * gp.epsOx) / (gp.tox_nm * 1e-9);       // F/m²
-  const n_m2 = (Cg * (Vg - gp.VDirac)) / E_CHARGE;          // 1/m² (signed)
+  const Cg = (EPS0 * gp.epsOx) / (gp.tox_nm * 1e-9);
+  const n_m2 = (Cg * (Vg - gp.VDirac)) / E_CHARGE;
   const mu_J = HBAR * gp.vF * Math.sqrt(Math.PI * Math.abs(n_m2)) * Math.sign(n_m2);
   return { n_m2, mu_eV: mu_J / E_CHARGE };
 }
 
-// Charged-impurity collision rate, Falkovsky (2008):
-//   τ⁻¹ = 2π² e⁴ n_imp / (ħ ε_g² ε_char)
-// Converted to SI via e² → e²/(4πε0):
-//   τ⁻¹ = e⁴ n_imp / (8 ε0² ħ ε_g² ε_char)
-// ε_char = characteristic electron energy ≈ max(|E_F|, kB·T)  (floored at 1 meV)
 function grapheneScattering(mu_eV, T_eV, gp) {
   const echar_J = Math.max(Math.abs(mu_eV), T_eV, 1e-3) * E_CHARGE;
   const nimp_m2 = gp.nimp_cm2 * 1e4;
-  const invTau = Math.pow(E_CHARGE, 4) * nimp_m2 /
-                 (8 * EPS0 * EPS0 * HBAR * gp.epsG * gp.epsG * echar_J); // 1/s
+  const invTau = Math.pow(E_CHARGE, 4) * nimp_m2 / (8 * EPS0 * EPS0 * HBAR * gp.epsG * gp.epsG * echar_J); // 1/s
   return { tau_s: 1 / invTau, Gamma_eV: (HBAR * invTau) / E_CHARGE };
 }
 
 // MARK: Kubo Conductivity
 // -----------------------------------------------------------------------------------------------
-
-// All energies (photon E, μ, T, Γ) in eV. Returns sheet conductance {re, im} in S.
-// Electron-hole symmetric: σ(μ) = σ(−μ), so |μ| is used throughout.
-
-// ln(2 cosh x), overflow-safe
 function ln2cosh(x) {
   const ax = Math.abs(x);
   return ax + Math.log1p(Math.exp(-2 * ax));
 }
 
-// G(x) = sinh(x/T) / (cosh(μ/T) + cosh(x/T)), overflow-safe (x ≥ 0, μ ≥ 0)
 function grapheneG(x, mu, T) {
   const u = x / T, m = mu / T, M = Math.max(u, m);
   const eu = Math.exp(u - M), eun = Math.exp(-u - M);
@@ -97,7 +79,6 @@ function grapheneG(x, mu, T) {
   return (eu - eun) / (em + emn + eu + eun);
 }
 
-// dG/dx = [cosh(x/T)cosh(μ/T) + 1] / (T (cosh(μ/T) + cosh(x/T))²), overflow-safe
 function grapheneGprime(x, mu, T) {
   const u = x / T, m = mu / T, M = Math.max(u, m);
   const a = Math.exp(u - M) + Math.exp(-u - M);
@@ -107,7 +88,6 @@ function grapheneGprime(x, mu, T) {
   return num / den;
 }
 
-// integrate f(x) from a to b using Simpson's rule with n intervals (n must be even)
 function simpson(f, a, b, n) {
   if (b - a <= 0) return 0;
   const h = (b - a) / n;
@@ -122,14 +102,11 @@ function grapheneSigma(E_eV, mu_eV, T_eV, Gamma_eV) {
   const mu = Math.abs(mu_eV);
   const G  = Math.max(Gamma_eV, 1e-9);
 
-  // --- intraband (Drude): (2ie²T/πħ(ω+iΓ)) ln[2cosh(μ/2T)]
-  // i/(ω+iΓ) = (Γ + iω)/(ω² + Γ²)
   const pref = (2 * E2_OVER_HBAR / Math.PI) * T * ln2cosh(mu / (2 * T));
   const d2 = w * w + G * G;
   let sRe = (pref * G) / d2;
   let sIm = (pref * w) / d2;
 
-  // --- interband: σ0 [ G(ω/2) + (4iω/π) ∫₀^∞ (G(ε)−G(ω/2))/(ω²−4ε²) dε ]
   const G0  = grapheneG(w / 2, mu, T);
   const Gp0 = grapheneGprime(w / 2, mu, T);
   const Lam = Math.max(w, 2 * mu) + 40 * T + 2;
@@ -162,9 +139,6 @@ function grapheneSigma(E_eV, mu_eV, T_eV, Gamma_eV) {
   return { re: sRe, im: sIm };
 }
 
-// Effective-medium equivalent 
-// (FOR CROSS-VALIDATION ONLY — the solver uses the boundary-condition method)
-// n_eff = sqrt(1 + iσ/(ε0 ω d)), d ≈ 0.34 nm.
 function grapheneEffectiveIndex(sigma, wl_nm, d_nm) {
   const d = (d_nm || 0.34) * 1e-9;
   const omega = (2 * Math.PI * 2.99792458e8) / (wl_nm * 1e-9); // rad/s
@@ -183,8 +157,6 @@ function cosThetaInLayer(nIncidentRe, theta0Rad, nLayer) {
   return cSqrt(inside);
 }
 
-// s-pol: r = (ni cosI − nj cosJ)/(ni cosI + nj cosJ),  t = 2 ni cosI/(ni cosI + nj cosJ)
-// p-pol: r = (nj cosI − ni cosJ)/(nj cosI + ni cosJ),  t = 2 ni cosI/(nj cosI + ni cosJ)
 function fresnelRT(ni, nj, cosI, cosJ, pol) {
   let r, t;
   if (pol === "s") {
@@ -211,12 +183,8 @@ function matMul2(A, B) {
 // MARK: Graphene TMM
 // -----------------------------------------------------------------------------------------------
 
-// s-pol:  η = n2cos2/(n1cos1),  ξ = σ η0 /(n1 cos1)
-//   D = ½ [[1+η+ξ, 1−η+ξ], [1−η−ξ, 1+η−ξ]]
-// p-pol:  ν = n2/n1, γ = cos2/cos1, ζ = σ η0 cos2 / n1
-//   D = ½ [[ν+γ+ζ, ν−γ−ζ], [ν−γ+ζ, ν+γ−ζ]]
 function grapheneInterfaceMatrix(ni, nj, cosI, cosJ, pol, sigma) {
-  const sEta = { re: sigma.re * ETA0, im: sigma.im * ETA0 }; // σ·η0, dimensionless
+  const sEta = { re: sigma.re * ETA0, im: sigma.im * ETA0 };
   const one = { re: 1, im: 0 };
   if (pol === "s") {
     const q1 = cMul(ni, cosI);
@@ -240,17 +208,12 @@ function grapheneInterfaceMatrix(ni, nj, cosI, cosJ, pol, sigma) {
 // MARK: Main Solver
 // -----------------------------------------------------------------------------------------------
 
-// layers: array of either
-//   { type: "dielectric" (or omitted), n: {re, im}, d }   d in nm
-//   { type: "graphene", Vg }                              zero thickness
-// Returns { R, T, A, graphene: info }.
 function solveTMM(wavelengths, nIncidentRe, nSubstrateRe, layers, theta0Deg, pol, grapheneParams) {
   const gp = Object.assign({}, GRAPHENE_DEFAULTS, grapheneParams || {});
   const T_eV = KB_EV * gp.T_K;
 
-  // Split the layer list into optical media + per-interface graphene sheets.
   const mediaLayers = [];
-  const ifaceGraphene = []; // ifaceGraphene[i] = array of sheet descriptors at interface i, or null
+  const ifaceGraphene = [];
   const grapheneInfo = [];
   let pending = null;
 
@@ -321,7 +284,6 @@ function solveTMM(wavelengths, nIncidentRe, nSubstrateRe, layers, theta0Deg, pol
       }
       M = matMul2(M, D);
 
-      // P = [e^{−ik0djnjcosJ}, 0; 0, e^{+ik0djnjcosJ}]
       const isLastInterface = i === nInterfaces - 1;
       if (!isLastInterface) {
         const d = mediaLayers[i].d;
@@ -355,14 +317,6 @@ function solveTMM(wavelengths, nIncidentRe, nSubstrateRe, layers, theta0Deg, pol
 
 // MARK: Absorption Cross Checks
 // -----------------------------------------------------------------------------------------------
-
-// independent field-based absorption cross-check
-// Computes A_field = Re(sigma)*|E_tan|^2 * eta0 / (n_incident * cos(theta0))
-// directly from the local tangential E-field at one graphene sheet, via a
-// partial transfer-matrix product. This is independent of the R,T algebra
-// used elsewhere (A = 1-R-T there), so it can catch bugs that a comparison
-// against 1-R-T cannot.
-
 function cInv2(M) {
   const det = cSub(cMul(M[0][0], M[1][1]), cMul(M[0][1], M[1][0]));
   return [
@@ -501,10 +455,6 @@ const AfieldAtPeak = computeFieldAbsorption([testWl], 1.0, 1.5, critLayersVg0, 0
 const rtAtPeak = solveTMM([testWl], 1.0, 1.5, critLayersVg0, 0, 's').A[0];
 console.log('A_field =', AfieldAtPeak[0], '   1-R-T =', rtAtPeak, '   diff =', Math.abs(AfieldAtPeak[0]-rtAtPeak));
 */
-
-
-
-// getting results for front/back combos
 
 /*
 function buildPhysicalCritLayers(lamC, nFront, nBack, Vg) {

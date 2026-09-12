@@ -817,7 +817,6 @@ function calculate() {
   console.timeEnd("Calculation-timer");
 }
 
-
 // MARK: validation
 // ------------------------------------------------------------------------------------------
 function runGrapheneValidation() {
